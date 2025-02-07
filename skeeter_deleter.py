@@ -18,6 +18,22 @@ class PostQualifier(models.AppBskyFeedDefs.FeedViewPost):
     # from feed-related business logic
     #
     # These filters are customizable, or new filters can be added here
+    def is_repost(self) -> bool:
+        if self.reason and self.reason.py_type == 'app.bsky.feed.defs#reasonRepost' :
+            return True
+        return False
+
+    def is_post_type(self, post_type) -> bool:
+        print(f"{post_type}")
+        if post_type == "all":
+            return True
+        if post_type == "repost":
+            return self.is_repost()
+        if post_type == "post":
+            return self.is_repost() == False
+        return False
+
+
     def is_viral(self, viral_threshold) -> bool:
         if viral_threshold == 0:
             return False
@@ -84,8 +100,10 @@ class PostQualifier(models.AppBskyFeedDefs.FeedViewPost):
                 print(f"Failed to delete: {self.post.uri}")
 
     @staticmethod
-    def to_delete(viral_threshold, stale_threshold, popular_threshold, domains_to_protect, now, post):
+    def to_delete(viral_threshold, stale_threshold, popular_threshold, post_type, domains_to_protect, now, post):
+        print(f"{post_type}")
         if (post.is_viral(viral_threshold) or post.is_stale(stale_threshold, now) or post.is_not_popular(popular_threshold)) and \
+            post.is_post_type(post_type) and \
             not post.is_protected_domain(domains_to_protect) and \
             not post.is_self_liked():
             return True
@@ -138,15 +156,14 @@ class SkeeterDeleter:
                     print(cursor)
         return to_unlike
 
-    def gather_posts_to_delete(self, viral_threshold, stale_threshold, popular_threshold, domains_to_protect, now, **kwargs) -> list[PostQualifier]:
+    def gather_posts_to_delete(self, viral_threshold, stale_threshold, popular_threshold, post_type, domains_to_protect, now, **kwargs) -> list[PostQualifier]:
         cursor = None
         to_delete = []
         while True:
             posts = self.client.get_author_feed(self.client.me.handle,
                                                 cursor=cursor,
-                                                filter="from:me",
                                                 limit=100)
-            delete_test = partial(PostQualifier.to_delete, viral_threshold, stale_threshold, popular_threshold, domains_to_protect, now)
+            delete_test = partial(PostQualifier.to_delete, viral_threshold, stale_threshold, popular_threshold, post_type, domains_to_protect, now)
             to_delete.extend(list(filter(delete_test,
                                         map(partial(PostQualifier.cast, self.client), posts.feed))))
 
@@ -208,6 +225,7 @@ class SkeeterDeleter:
                  popular_threshold : int=0,
                  domains_to_protect : list[str]=[],
                  fixed_likes_cursor : str=None,
+                 post_type : str="post",
                  verbosity : int=0,
                  autodelete : bool=False):
         self.client = Client(request=RequestCustomTimeout())
@@ -218,6 +236,7 @@ class SkeeterDeleter:
             'viral_threshold': viral_threshold,
             'stale_threshold': stale_threshold,
             'popular_threshold': popular_threshold,
+            'post_type': post_type,
             'domains_to_protect': domains_to_protect,
             'fixed_likes_cursor': fixed_likes_cursor,
             'now': datetime.now(timezone.utc),
@@ -270,6 +289,7 @@ it will page through the entire history of your account even if there are no lik
 a long time to complete. If you have already purged likes, it's possible to simply set a token at a reasonable point in the recent
 past which will terminate the search. To list the tokens, run -vv mode. Tokens are short alphanumeric strings. Default empty.""",
 default="")
+    parser.add_argument("-t", "--post-type", help="""Apply deletes to 'all' 'post' or 'repost' Default 'post'. """, default="post")
     verbosity = parser.add_mutually_exclusive_group()
     verbosity.add_argument("-v", "--verbose", help="""Show more information about what is happening.""",
                            action="store_true")
@@ -290,6 +310,7 @@ default="")
         'viral_threshold': max([0, args.max_reposts]),
         'stale_threshold': max([0, args.stale_limit]),
         'popular_threshold': max([0, args.popular_limit]),
+        'post_type': args.post_type,
         'domains_to_protect': [s.strip() for s in args.domains_to_protect.split(",")],
         'fixed_likes_cursor': args.fixed_likes_cursor,
         'verbosity': verbosity,

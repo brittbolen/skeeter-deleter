@@ -1,0 +1,9 @@
+apt install python3-full
+apt install python3-pip
+git clone https://github.com/brittbolen/skeeter-deleter.git
+python3 -m venv skeeter-deleter/
+cd skeeter-deleter/
+./bin/pip3 install -r requirements.txt
+export BLUESKY_USERNAME=
+export BLUESKY_PASSWORD=
+./bin/python3 skeeter_deleter.py --help

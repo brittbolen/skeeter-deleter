@@ -3,6 +3,7 @@ import dateutil.parser
 import httpx
 import magic
 import os
+import time
 import rich.progress
 from atproto import CAR, Client, models
 from atproto_client.request import Request
@@ -22,6 +23,11 @@ class PostQualifier(models.AppBskyFeedDefs.FeedViewPost):
             return False
         return self.post.repost_count >= viral_threshold
 
+    def is_not_popular(self, popular_threshold) -> bool:
+        if popular_threshold == 0:
+            return False
+        return self.post.like_count < popular_threshold
+
     def is_stale(self, stale_threshold, now) -> bool:
         if stale_threshold == 0:
             return False
@@ -38,10 +44,15 @@ class PostQualifier(models.AppBskyFeedDefs.FeedViewPost):
         # A candidate for a future refactor.
         lc = None
         while True:
-            likes = self.client.app.bsky.feed.get_likes(params={
-                'uri': self.post.uri,
-                'cursor': lc,
-                'limit': 100})
+            try:
+                likes = self.client.app.bsky.feed.get_likes(params={
+                    'uri': self.post.uri,
+                    'cursor': lc,
+                    'limit': 100})
+            except Exception as err:
+                print(f"excpetion, sleepting 300: {err}")
+                time.sleep(300)
+                continue
             lc = likes.cursor
             if self.client.me.did in [l.actor.did for l in likes.likes] and \
                 self.post.author.did == self.client.me.did:
@@ -73,8 +84,8 @@ class PostQualifier(models.AppBskyFeedDefs.FeedViewPost):
                 print(f"Failed to delete: {self.post.uri}")
 
     @staticmethod
-    def to_delete(viral_threshold, stale_threshold, domains_to_protect, now, post):
-        if (post.is_viral(viral_threshold) or post.is_stale(stale_threshold, now)) and \
+    def to_delete(viral_threshold, stale_threshold, popular_threshold, domains_to_protect, now, post):
+        if (post.is_viral(viral_threshold) or post.is_stale(stale_threshold, now) or post.is_not_popular(popular_threshold)) and \
             not post.is_protected_domain(domains_to_protect) and \
             not post.is_self_liked():
             return True
@@ -127,7 +138,7 @@ class SkeeterDeleter:
                     print(cursor)
         return to_unlike
 
-    def gather_posts_to_delete(self, viral_threshold, stale_threshold, domains_to_protect, now, **kwargs) -> list[PostQualifier]:
+    def gather_posts_to_delete(self, viral_threshold, stale_threshold, popular_threshold, domains_to_protect, now, **kwargs) -> list[PostQualifier]:
         cursor = None
         to_delete = []
         while True:
@@ -135,7 +146,7 @@ class SkeeterDeleter:
                                                 cursor=cursor,
                                                 filter="from:me",
                                                 limit=100)
-            delete_test = partial(PostQualifier.to_delete, viral_threshold, stale_threshold, domains_to_protect, now)
+            delete_test = partial(PostQualifier.to_delete, viral_threshold, stale_threshold, popular_threshold, domains_to_protect, now)
             to_delete.extend(list(filter(delete_test,
                                         map(partial(PostQualifier.cast, self.client), posts.feed))))
 
@@ -194,6 +205,7 @@ class SkeeterDeleter:
                  credentials : Credentials,
                  viral_threshold : int=0,
                  stale_threshold : int=0,
+                 popular_threshold : int=0,
                  domains_to_protect : list[str]=[],
                  fixed_likes_cursor : str=None,
                  verbosity : int=0,
@@ -205,6 +217,7 @@ class SkeeterDeleter:
         params = {
             'viral_threshold': viral_threshold,
             'stale_threshold': stale_threshold,
+            'popular_threshold': popular_threshold,
             'domains_to_protect': domains_to_protect,
             'fixed_likes_cursor': fixed_likes_cursor,
             'now': datetime.now(timezone.utc),
@@ -247,6 +260,9 @@ Defaults to 0.""", default=0, type=int)
     parser.add_argument("-s", "--stale-limit", help="""The upper bound of the age of a post in days before it is deleted.
 Ignore or set to 0 to not set an upper limit. This feature deletes old posts that may be taken out of context or selectively
 misinterpreted, reducing potential harassment. Detaults to 0.""", default=0, type=int)
+    parser.add_argument("-p", "--popular-limit", help="""The minimum number of likes to keep a post from being deleted
+Ignore or set to 0 to not set an upper limit. This feature deletes old posts that are not popular, and keeps your posts with
+more likes. Keeps your most popular posts. Detaults to 0.""", default=0, type=int)
     parser.add_argument("-d", "--domains-to-protect", help="""A comma separated list of domain names to protect. Posts linking to
 domains in this list will not be auto-deleted regardless of age or virality. Default is empty.""", default="")
     parser.add_argument("-c", "--fixed-likes-cursor", help="""A complex setting. ATProto pagination through is awkward, and
@@ -273,6 +289,7 @@ default="")
     params = {
         'viral_threshold': max([0, args.max_reposts]),
         'stale_threshold': max([0, args.stale_limit]),
+        'popular_threshold': max([0, args.popular_limit]),
         'domains_to_protect': [s.strip() for s in args.domains_to_protect.split(",")],
         'fixed_likes_cursor': args.fixed_likes_cursor,
         'verbosity': verbosity,

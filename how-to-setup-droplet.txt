@@ -1,5 +1,6 @@
-apt install python3-full
-apt install python3-pip
+#!/bin/bash
+cd ~root/
+apt install python3-full python3-pip
 git clone https://github.com/brittbolen/skeeter-deleter.git
 python3 -m venv skeeter-deleter/
 cd skeeter-deleter/

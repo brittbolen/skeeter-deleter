@@ -49,6 +49,8 @@ with the following command line options:
 
 - `-s`, `--stale-limit`: the upper limit of the age in days a post can be. This is to prevent people digging up old posts. Set this to 0 or ignore the flag if you don't want to use this feature. Note: at least either `-s` or `-l` (or both) must be set to delete posts, replies, reblogs, or likes.
 
+- `-p`, `--popular-limit`: The minimum number of likes to keep a post from being deleted. This is to keep only your most liked posts, and remove less popular posts.  Set this to 0 or ignore the flag if you don't want to use this feature.
+
 - `-d`, `--domains-to-protect`: a comma-separated list of domain names to preserve, for example you can configure the tool to not delete links to your blog or your favorite sites. Optional.
 
 - `-c`, `--fixed-likes-cursor`: the cursor ID for the maximum lookback for likes. Due to the ATProto design, fetching likes can take a long time, as the cursor still pages even if there are no old likes to be found. If you have run this tool at least once before, it is recommended to set this to a cursor in the recent past. This can be obtained by running `-v` or `-vv` and copying the cursor output
@@ -71,3 +73,5 @@ A few features are planned:
 - Github action wrapper
 - AWS Lambda, Azure Function, etc bindings
 - Storing archives as JSON or other usable formats
+- Disable downloading media in archive, useful if you make backups with another tool
+- Test -p with other features, or better document how they interact

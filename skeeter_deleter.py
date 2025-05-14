@@ -36,6 +36,18 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
             return False
         return self.repost_count >= viral_threshold
 
+    def is_not_popular(self, popular_threshold) -> bool:
+        """
+        Check if the post is not popular based on the like count
+        Args:
+            popular_threshold (int): The threshold for considering a post popular.
+        Returns:
+            bool: True if the post has less likes than popular threshold, False otherwise.
+        """
+        if popular_threshold == 0:
+            return False
+        return self.like_count < popular_threshold
+
     def is_stale(self, stale_threshold, now) -> bool:
         """
         Check if the post is stale based on its age.
@@ -121,12 +133,13 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
                 logging.error(f"An error occurred during deletion: {e}")
 
     @staticmethod
-    def to_delete(viral_threshold, stale_threshold, domains_to_protect, now, self_likes, post):
+    def to_delete(viral_threshold, stale_threshold, popular_threshold, domains_to_protect, now, self_likes, post):
         """
         Determine if a post should be deleted.
         Args:
             viral_threshold (int): The threshold for considering a post viral.
             stale_threshold (int): The threshold for considering a post stale.
+            popular_threshold (int): The threshold for considering a post not popular.
             domains_to_protect (list): List of domains to protect.
             now (datetime): The current time.
             self_likes (list): List of self-liked posts extracted from
@@ -135,7 +148,7 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
         Returns:
             bool: True if the post should be deleted, False otherwise.
         """
-        if (post.is_viral(viral_threshold) or post.is_stale(stale_threshold, now)) and \
+        if (post.is_viral(viral_threshold) or post.is_stale(stale_threshold, now) or post.is_not_popular(popular_threshold)) and \
             not post.is_protected_domain(domains_to_protect) and \
             not post.is_self_liked(self_likes):
             return True
@@ -252,6 +265,7 @@ class SkeeterDeleter:
                        repo,
                        viral_threshold,
                        stale_threshold,
+                       popular_threshold,
                        domains_to_protect,
                        now,
                        self_likes,
@@ -274,6 +288,7 @@ class SkeeterDeleter:
                         partial(PostQualifier.to_delete,
                                 viral_threshold,
                                 stale_threshold,
+                                popular_threshold,
                                 domains_to_protect,
                                 now,
                                 self_likes),
@@ -290,6 +305,7 @@ class SkeeterDeleter:
     def gather_posts_to_delete(self,
                                viral_threshold,
                                stale_threshold,
+                               popular_threshold,
                                domains_to_protect,
                                now,
                                self_likes,
@@ -305,6 +321,7 @@ class SkeeterDeleter:
                 delete_test = partial(PostQualifier.to_delete,
                                     viral_threshold,
                                     stale_threshold,
+                                    popular_threshold,
                                     domains_to_protect,
                                     now,
                                     self_likes)
@@ -379,6 +396,7 @@ class SkeeterDeleter:
                  credentials : Credentials,
                  viral_threshold : int=0,
                  stale_threshold : int=0,
+                 popular_threshold : int=0,
                  domains_to_protect : list[str]=[],
                  fixed_likes_cursor : str=None,
                  verbosity : int=0,
@@ -390,6 +408,7 @@ class SkeeterDeleter:
         params = {
             'viral_threshold': viral_threshold,
             'stale_threshold': stale_threshold,
+            'popular_threshold': popular_threshold,
             'domains_to_protect': domains_to_protect,
             'fixed_likes_cursor': fixed_likes_cursor,
             'now': datetime.now(timezone.utc),
@@ -399,6 +418,7 @@ class SkeeterDeleter:
 
         repo = self.archive_repo(**params)
 
+        print("Processing...")
         self_likes, self.to_unlike = self.gather_likes(repo, **params)
         print(f"Found {len(self.to_unlike)} post{'' if len(self.to_unlike) == 1 else 's'} to unlike.")
         
@@ -438,6 +458,9 @@ Defaults to 0.""", default=0, type=int)
     parser.add_argument("-s", "--stale-limit", help="""The upper bound of the age of a post in days before it is deleted.
 Ignore or set to 0 to not set an upper limit. This feature deletes old posts that may be taken out of context or selectively
 misinterpreted, reducing potential harassment. Defaults to 0.""", default=0, type=int)
+    parser.add_argument("-p", "--popular-limit", help="""The minimum number of likes to keep a post from being deleted
+Ignore or set to 0 to not set a minimum number of likes. This feature deletes old posts that are not popular, and keeps your posts with
+more likes. Keeps your most popular posts. Detaults to 0.""", default=0, type=int)
     parser.add_argument("-d", "--domains-to-protect", help="""A comma separated list of domain names to protect. Posts linking to
 domains in this list will not be auto-deleted regardless of age or virality. Default is empty.""", default="")
     parser.add_argument("-c", "--fixed-likes-cursor", help="""A complex setting. ATProto pagination through is awkward, and
@@ -464,6 +487,7 @@ default="")
     params = {
         'viral_threshold': max([0, args.max_reposts]),
         'stale_threshold': max([0, args.stale_limit]),
+        'popular_threshold': max([0, args.popular_limit]),
         'domains_to_protect': ([] if args.domains_to_protect == ""
                                else [s.strip() 
                                      for s in args.domains_to_protect.split(",")]),

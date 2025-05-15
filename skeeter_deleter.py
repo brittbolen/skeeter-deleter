@@ -399,6 +399,7 @@ class SkeeterDeleter:
                  popular_threshold : int=0,
                  domains_to_protect : list[str]=[],
                  fixed_likes_cursor : str=None,
+                 post_type: str=None,
                  verbosity : int=0,
                  autodelete : bool=False):
         self.client = Client(request=RequestCustomTimeout())
@@ -415,18 +416,23 @@ class SkeeterDeleter:
         }
         self.verbosity = verbosity
         self.autodelete = autodelete
+        to_unrepost = []
+        self.to_delete = []
 
         repo = self.archive_repo(**params)
 
         print("Processing...")
         self_likes, self.to_unlike = self.gather_likes(repo, **params)
-        print(f"Found {len(self.to_unlike)} post{'' if len(self.to_unlike) == 1 else 's'} to unlike.")
+        if post_type == "likes" or post_type == "all":
+            print(f"Found {len(self.to_unlike)} post{'' if len(self.to_unlike) == 0 else 's'} to unlike.")
         
-        to_unrepost = self.gather_reposts(repo, self_likes=self_likes, **params)
-        print(f"Found {len(to_unrepost)} post{'' if len(to_unrepost) == 1 else 's'} to unrepost.")
+        if post_type == "reposts" or post_type == "all":
+            to_unrepost = self.gather_reposts(repo, self_likes=self_likes, **params)
+            print(f"Found {len(to_unrepost)} post{'' if len(to_unrepost) == 1 else 's'} to unrepost.")
 
-        self.to_delete = self.gather_posts_to_delete(self_likes=self_likes, **params)
-        print(f"Found {len(self.to_delete)} post{'' if len(self.to_delete) == 1 else 's'} to delete.")
+        if post_type == "posts" or post_type == "all":
+            self.to_delete = self.gather_posts_to_delete(self_likes=self_likes, **params)
+            print(f"Found {len(self.to_delete)} post{'' if len(self.to_delete) == 1 else 's'} to delete.")
 
         self.to_delete.extend(to_unrepost)
 
@@ -451,6 +457,8 @@ Proceed to delete {n_delete} post{'' if n_delete == 1 else 's'}? WARNING: THIS I
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
+    parser.add_argument("-t", "--post-type", help="""Apply rules to 'all' 'posts' 'reposts' or 'likes' Default 'all'. This allows you to use different rules for removing likes or reposts than your own posts.""", default="all", choices=['posts', 'reposts', 'all','likes'])
 
     parser.add_argument("-l", "--max-reposts", help="""The upper bound of the number of reposts a post can have before it is deleted.
 Ignore or set to 0 to not set an upper limit. This feature deletes posts that are going viral, which can reduce harassment.
@@ -492,10 +500,15 @@ default="")
                                else [s.strip() 
                                      for s in args.domains_to_protect.split(",")]),
         'fixed_likes_cursor': args.fixed_likes_cursor,
+        'post_type': args.post_type,
         'verbosity': verbosity,
         'autodelete': args.yes
     }
 
     sd = SkeeterDeleter(credentials=creds, **params)
-    sd.unlike()
-    sd.delete()
+
+    if args.post_type == "all" or args.post_type == "likes":
+        sd.unlike()
+
+    if args.post_type == "all" or args.post_type == "reposts" or args.post_type == "posts":
+        sd.delete()

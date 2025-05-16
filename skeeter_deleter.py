@@ -5,6 +5,7 @@ import logging
 import magic
 import os
 import rich.progress
+import time
 from atproto import CAR, Client, models
 from atproto_core.cid import CID
 from atproto_client.request import Request
@@ -110,6 +111,13 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
                 raise e
         except Exception as e:
             logging.error(f"An error occurred while unliking: {e}")
+            logging.info(f"error code {e.response.status_code}")
+            if e.response.status_code == 429:
+                sleep_len = int(e.response.headers.get('ratelimit-reset')) - int(time.time())
+                logging.info(f"rate limited... sleeping {sleep_len}")
+                print(f"rate limited... sleeping {sleep_len}")
+                time.sleep(sleep_len)
+
 
     def remove(self):
         """
@@ -123,6 +131,12 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
                 logging.error(f"HTTP error occurred during unreposting: {e}")
             except Exception as e:
                 logging.error(f"An error occurred during unreposting: {e}")
+                logging.info(f"error code {e.response.status_code}")
+                if e.response.status_code == 429:
+                    sleep_len = int(e.response.headers.get('ratelimit-reset')) - int(time.time())
+                    logging.info(f"rate limited... sleeping {sleep_len}")
+                    print(f"rate limited... sleeping {sleep_len}")
+                    time.sleep(sleep_len)
         else:
             try:
                 logging.info(f"Removing post: {self.uri}")
@@ -131,6 +145,12 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
                 logging.error(f"HTTP error occurred during deletion: {e}")
             except Exception as e:
                 logging.error(f"An error occurred during deletion: {e}")
+                logging.info(f"error code {e.response.status_code}")
+                if e.response.status_code == 429:
+                    sleep_len = int(e.response.headers.get('ratelimit-reset')) - int(time.time())
+                    logging.info(f"rate limited... sleeping {sleep_len}")
+                    print(f"rate limited... sleeping {sleep_len}")
+                    time.sleep(sleep_len)
 
     @staticmethod
     def to_delete(viral_threshold, stale_threshold, popular_threshold, domains_to_protect, now, self_likes, post):

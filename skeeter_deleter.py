@@ -308,9 +308,14 @@ class SkeeterDeleter:
                        **kwargs) -> list[PostQualifier]:
         archive = CAR.from_bytes(repo)
         
+        # modification - this filters out self reposts... i also changed the type handling here.
+        # originally x in the lambda was just being turned into a generic string for searching 
+        # the type to see if a repost... not sure why... wish i knew... but i treated this more
+        # type safely.
         reposts = list(
             filter(lambda x : '$type' in x and
-                   "app.bsky.feed.repost" in str(x),
+                   "app.bsky.feed.repost" == x['$type'] and
+                   self.client.me.did not in x['subject']['uri'],
                    [archive.blocks.get(cid) for cid in archive.blocks]
             )
         )

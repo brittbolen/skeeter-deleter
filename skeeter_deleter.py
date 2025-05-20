@@ -109,13 +109,18 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
                 logging.error(f"HTTP error occurred while unliking via URI: {e}")
             except Exception as e:
                 raise e
+        except TypeError as e:
+            # Handle TypeError specifically
+            print(f"Removing like: Type error occurred {e}")
+            logging.error(f"Removing like: Type error occurred {e}")
         except Exception as e:
-            logging.error(f"An error occurred while unliking: {e}")
+            logging.error(f"An error occurred while unliking: type {e.__class__.__name__} : {e}")
             logging.info(f"error code {e.response.status_code}")
             if e.response.status_code == 429:
-                sleep_len = int(e.response.headers.get('ratelimit-reset')) - int(time.time())
-                logging.info(f"rate limited... sleeping {sleep_len}")
-                print(f"rate limited... sleeping {sleep_len}")
+                sleep_until = int(e.response.headers.get('ratelimit-reset'))
+                sleep_len = sleep_until - int(time.time())
+                logging.info(f"rate limited... sleeping {sleep_len} seconds until {time.ctime(sleep_until)}")
+                print(f"rate limited... sleeping {sleep_len} seconds until {time.ctime(sleep_until)}")
                 time.sleep(sleep_len)
 
 
@@ -129,13 +134,18 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
                 self.client.unrepost(self.viewer.repost)
             except httpx.HTTPStatusError as e:
                 logging.error(f"HTTP error occurred during unreposting: {e}")
+            except TypeError as e:
+                # Handle TypeError specifically
+                print(f"Removing like: Type error occurred {e}")
+                logging.error(f"Removing like: Type error occurred {e}")
             except Exception as e:
-                logging.error(f"An error occurred during unreposting: {e}")
+                logging.error(f"An error occurred during unreposting: type {e.__class__.__name__} : {e}")
                 logging.info(f"error code {e.response.status_code}")
                 if e.response.status_code == 429:
-                    sleep_len = int(e.response.headers.get('ratelimit-reset')) - int(time.time())
-                    logging.info(f"rate limited... sleeping {sleep_len}")
-                    print(f"rate limited... sleeping {sleep_len}")
+                    sleep_until = int(e.response.headers.get('ratelimit-reset'))
+                    sleep_len = sleep_until - int(time.time())
+                    logging.info(f"rate limited... sleeping {sleep_len} seconds until {time.ctime(sleep_until)}")
+                    print(f"rate limited... sleeping {sleep_len} seconds until {time.ctime(sleep_until)}")
                     time.sleep(sleep_len)
         else:
             try:
@@ -143,13 +153,19 @@ class PostQualifier(models.AppBskyFeedDefs.PostView):
                 self.client.delete_post(self.uri)
             except httpx.HTTPStatusError as e:
                 logging.error(f"HTTP error occurred during deletion: {e}")
+            except TypeError as e:
+                # Handle TypeError specifically
+                print(f"Removing like: Type error occurred {e}")
+                logging.error(f"Removing like: Type error occurred {e}")
             except Exception as e:
                 logging.error(f"An error occurred during deletion: {e}")
+                logging.error(f"An error occurred during deletion: type {e.__class__.__name__} : {e}")
                 logging.info(f"error code {e.response.status_code}")
                 if e.response.status_code == 429:
-                    sleep_len = int(e.response.headers.get('ratelimit-reset')) - int(time.time())
-                    logging.info(f"rate limited... sleeping {sleep_len}")
-                    print(f"rate limited... sleeping {sleep_len}")
+                    sleep_until = int(e.response.headers.get('ratelimit-reset'))
+                    sleep_len = sleep_until - int(time.time())
+                    logging.info(f"rate limited... sleeping {sleep_len} seconds until {time.ctime(sleep_until)}")
+                    print(f"rate limited... sleeping {sleep_len} seconds until {time.ctime(sleep_until)}")
                     time.sleep(sleep_len)
 
     @staticmethod

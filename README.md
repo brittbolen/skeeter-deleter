@@ -27,6 +27,8 @@ The tool works as follows:
 1. it unlikes posts
 1. it deletes posts
 
+BRITT NOTE: This version when selecting posts to delete will not collect self reposts - Britt is still not 100% sure how this works :(
+
 ## Installation
 
 Clone this repository and install the python libraries from `requirements.txt` using your preferred python package management solution. Note: you will need to install `libmagic`. Please see the instructions on [the `python-magic` pypi page](https://pypi.org/project/python-magic/).
@@ -54,6 +56,8 @@ with the following command line options:
 - `-d`, `--domains-to-protect`: a comma-separated list of domain names to preserve, for example you can configure the tool to not delete links to your blog or your favorite sites. Optional.
 
 - `-c`, `--fixed-likes-cursor`: the cursor ID for the maximum lookback for likes. Due to the ATProto design, fetching likes can take a long time, as the cursor still pages even if there are no old likes to be found. If you have run this tool at least once before, it is recommended to set this to a cursor in the recent past. This can be obtained by running `-v` or `-vv` and copying the cursor output
+
+- `-t {posts,reposts,all,likes}`, `--post-type {posts,reposts,all,likes}`: Apply rules to 'all' 'posts' 'reposts' or 'likes' Default 'all'. This allows you to use different rules for removing likes or reposts than your own posts.
 
 - `-v`, `--verbose`: emit more information about progress, useful for initial runs where many posts will be archived and deleted
 

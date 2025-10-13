@@ -1,4 +1,6 @@
-#!/bin/bash
+# Run these commands to setup the tool
+# you need a virtual machine with python
+# 3.12.  I used ubuntu 24.04 (LTS) x64, 2 GB Ram, 1 CPU
 cd ~root/
 apt install python3-full python3-pip
 git clone https://github.com/brittbolen/skeeter-deleter.git
@@ -9,10 +11,9 @@ export BLUESKY_USERNAME=
 export BLUESKY_PASSWORD=
 ./bin/python3 skeeter_deleter.py --help
 
-DON'T USE until you fix issue with removing self reposts
 
-how to run...
-remove likes, remove reposts, remove unpopular, - note modified code ignores self-reposts in step 2
+# how to run...
+# remove likes, remove reposts, remove unpopular, - note modified code ignores self-reposts in step 2
 ./bin/python3 skeeter_deleter.py -vv -s 1 -t likes
 ./bin/python3 skeeter_deleter.py -vv -s 1 -t reposts
 ./bin/python3 skeeter_deleter.py -vv -p 100

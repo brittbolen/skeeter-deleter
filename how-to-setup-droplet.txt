@@ -2,7 +2,7 @@
 # you need a virtual machine with python
 # 3.12.  I used ubuntu 24.04 (LTS) x64, 2 GB Ram, 1 CPU
 cd ~root/
-apt install python3-full python3-pip
+apt install -y python3-full python3-pip python3.12-venv
 git clone https://github.com/brittbolen/skeeter-deleter.git
 python3 -m venv skeeter-deleter/
 cd skeeter-deleter/

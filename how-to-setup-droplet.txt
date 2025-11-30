@@ -11,9 +11,15 @@ export BLUESKY_USERNAME=
 export BLUESKY_PASSWORD=
 ./bin/python3 skeeter_deleter.py --help
 
+exit 0
 
 # how to run...
-# remove likes, remove reposts, remove unpopular, - note modified code ignores self-reposts in step 2
+# run all of this inside 
+# remove likes of other people's posts
 ./bin/python3 skeeter_deleter.py -vv -s 1 -t likes
+
+# remove reposts (self reposts are not touched)
 ./bin/python3 skeeter_deleter.py -vv -s 1 -t reposts
+
+# remove unpopular posts that are not self-liked
 ./bin/python3 skeeter_deleter.py -vv -p 100

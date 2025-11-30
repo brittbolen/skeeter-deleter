@@ -7,6 +7,9 @@ THIS CODE IS VERY DESTRUCTIVE. The maintainer assumes no liability or warranty f
 
 This is a command-line tool that allows a user to download an archive of their Bluesky posts, remove likes, and delete old posts per user-specified criteria, namely age and virality.
 
+
+BRITT NOTE: the downloading of an archive is currently disabled
+
 ### Why delete old posts?
 
 Social media is a great tool to connect people, but it can also be a tool to harass and harm people. One of the more insidious social media behaviors is the tendency to dig up old, out-of-context posts and use them to impugn, impeach, harass, molest, or otherwise defame other users. Similarly, posts that go viral tend to attract unwanted attention, which can lead to arguments, harassment, or other unpleasant experiences.

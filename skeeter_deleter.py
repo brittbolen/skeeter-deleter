@@ -406,6 +406,7 @@ class SkeeterDeleter:
             
     def archive_repo(self, now, **kwargs):
         repo = self.client.com.atproto.sync.get_repo(params={'did': self.client.me.did})
+        return repo
         clean_user_did = self.client.me.did.replace(":", "_")
         Path(f"archive/{clean_user_did}/_blob/").mkdir(parents=True, exist_ok=True)
         print("Archiving posts...")
@@ -460,6 +461,7 @@ class SkeeterDeleter:
         to_unrepost = []
         self.to_delete = []
 
+        # note this repo is used by later steps, so can't just skip this
         repo = self.archive_repo(**params)
 
         print("Processing...")

@@ -14,7 +14,8 @@ export BLUESKY_PASSWORD=
 exit 0
 
 # how to run...
-# run all of this inside 
+# run all of these commands inside screen because they can be rate limited and take a while
+
 # remove likes of other people's posts
 ./bin/python3 skeeter_deleter.py -vv -s 1 -t likes
 
